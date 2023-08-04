@@ -8,8 +8,8 @@ from dotenv import load_dotenv
 
 def make_chain():
     model = ChatOpenAI(
-        model_name="gpt-3.5-turbo",
-        temperature="0",
+        model_name="gpt-4",
+        temperature="1",
         # verbose=True
     )
     embedding = OpenAIEmbeddings()

@@ -1,4 +1,10 @@
-# 💬 Chat with your PDF 
+```
+podman build -t chat-code-chroma .
+podman run -ti -v ./:/usr/src/app localhost/chat-code-chroma /bin/bash
+
+```
+
+# 💬 Chat with your PDF
 
 ## 👷️ Architecture
 
