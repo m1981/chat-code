@@ -11,7 +11,7 @@ from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
 
 from dotenv import load_dotenv
-
+from extract import Extract, PDFExtract
 
 def extract_metadata_from_pdf(file_path: str) -> dict:
     with open(file_path, "rb") as pdf_file:
@@ -43,20 +43,21 @@ def extract_pages_from_pdf(file_path: str) -> List[Tuple[int, str]]:
     return pages
 
 
-def parse_pdf(file_path: str) -> Tuple[List[Tuple[int, str]], Dict[str, str]]:
+def parse_document(file_path: str, document_type: Extract = PDFExtract) -> Tuple[List[Tuple[int, str]], Dict[str, str]]:
     """
-    Extracts the title and text from each page of the PDF.
-
-    :param file_path: The path to the PDF file.
+    :param file_path: The path to the file.
+    :param document_type: The type of document to parse. Default to PDF.
     :return: A tuple containing the title and a list of tuples with page numbers and extracted text.
     """
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    metadata = extract_metadata_from_pdf(file_path)
-    pages = extract_pages_from_pdf(file_path)
+    parser = document_type(file_path)
+    metadata = parser.extract_metadata()
+    pages = parser.extract_text()
 
     return pages, metadata
+
 
 
 def merge_hyphenated_words(text: str) -> str:
@@ -113,7 +114,8 @@ if __name__ == "__main__":
 
     # Step 1: Parse PDF
     file_path = "src/data/april-2023.pdf"
-    raw_pages, metadata = parse_pdf(file_path)
+    raw_pages, metadata = parse_document(file_path, PDFExtract)  # or TXTExtract for text files
+
 
     # Step 2: Create text chunks
     cleaning_functions = [
