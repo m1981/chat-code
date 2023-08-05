@@ -1,6 +1,7 @@
 import os
 import PyPDF4
 import pdfplumber
+from langchain.text_splitter import Language
 
 class Extract:
     def __init__(self, file_path: str):
@@ -39,6 +40,12 @@ class PDFExtract(Extract):
 
 
 class TXTExtract(Extract):
+    def __init__(self, file_path: str, language: Language):
+        super().__init__(file_path)
+        self.splitter = RecursiveCharacterTextSplitter.from_language(
+            language=language, chunk_size=1000, chunk_overlap=200
+        )
+
     def extract_metadata(self):
         # For a text file, you might have a different way to extract metadata or have none at all
         return {}
@@ -49,6 +56,39 @@ class TXTExtract(Extract):
 
         with open(self.file_path, "r") as txt_file:
             text = txt_file.read()
-        pages = [(1, text)]  # For simple text files, we can treat whole content as one page
+        chunks = self.splitter.split_text(text)
+        pages = [(i+1, chunk) for i, chunk in enumerate(chunks)]  # Treat each chunk as a page
 
         return pages
+
+
+# Add this code where the other classes (Extract, PDFExtract, TXTExtract) are defined
+
+from langchain.text_splitter import (
+    RecursiveCharacterTextSplitter,
+    Language,
+)
+
+class TextSplitter():
+    def split_documents(self, docs):
+        raise NotImplementedError
+
+
+class JSSplitter(TextSplitter):
+    def __init__(self, chunk_size=1000, chunk_overlap=200):
+        self._splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.JS, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
+
+    def split_documents(self, docs):
+        return self._splitter.split_documents(docs)
+
+
+class TXTSplitter(TextSplitter):
+    def __init__(self, chunk_size=1000, chunk_overlap=200):
+        self._splitter = RecursiveCharacterTextSplitter.from_language(
+            language=Language.ENGLISH, chunk_size=chunk_size, chunk_overlap=chunk_overlap
+        )
+
+    def split_documents(self, docs):
+        return self._splitter.split_documents(docs)

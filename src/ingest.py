@@ -9,9 +9,10 @@ from langchain.docstore.document import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import Chroma
 from langchain.embeddings import OpenAIEmbeddings
+from langchain.text_splitter import Language
 
 from dotenv import load_dotenv
-from extract import Extract, PDFExtract
+from extract import PDFExtract, TXTExtract
 
 def extract_metadata_from_pdf(file_path: str) -> dict:
     with open(file_path, "rb") as pdf_file:
@@ -43,7 +44,7 @@ def extract_pages_from_pdf(file_path: str) -> List[Tuple[int, str]]:
     return pages
 
 
-def parse_document(file_path: str, document_type: Extract = PDFExtract) -> Tuple[List[Tuple[int, str]], Dict[str, str]]:
+def parse_document(file_path: str, document_type) -> Tuple[List[Tuple[int, str]], Dict[str, str]]:
     """
     :param file_path: The path to the file.
     :param document_type: The type of document to parse. Default to PDF.
@@ -52,11 +53,12 @@ def parse_document(file_path: str, document_type: Extract = PDFExtract) -> Tuple
     if not os.path.isfile(file_path):
         raise FileNotFoundError(f"File not found: {file_path}")
 
-    parser = document_type(file_path)
+    parser = document_type(file_path) if callable(document_type) else document_type(file_path)
     metadata = parser.extract_metadata()
     pages = parser.extract_text()
 
     return pages, metadata
+
 
 
 
@@ -112,10 +114,11 @@ def text_to_docs(text: List[str], metadata: Dict[str, str]) -> List[Document]:
 if __name__ == "__main__":
     load_dotenv()
 
-    # Step 1: Parse PDF
-    file_path = "src/data/april-2023.pdf"
-    raw_pages, metadata = parse_document(file_path, PDFExtract)  # or TXTExtract for text files
+    # Step 1: Parse document
+    file_path = "src/data/chat.tsx"
+    document_type = PDFExtract if file_path.endswith('.pdf') else lambda file_path: TXTExtract(file_path, Language.JS)
 
+    raw_pages, metadata = parse_document(file_path, document_type)
 
     # Step 2: Create text chunks
     cleaning_functions = [
@@ -123,11 +126,11 @@ if __name__ == "__main__":
         fix_newlines,
         remove_multiple_newlines,
     ]
-    cleaned_text_pdf = clean_text(raw_pages, cleaning_functions)
-    document_chunks = text_to_docs(cleaned_text_pdf, metadata)
+    cleaned_text = clean_text(raw_pages, cleaning_functions)
+    document_chunks = text_to_docs(cleaned_text, metadata)
 
     # Optional: Reduce embedding cost by only using the first 23 pages
-    document_chunks = document_chunks[:70]
+    # document_chunks = document_chunks[:70]
 
     # Step 3 + 4: Generate embeddings and store them in DB
     embeddings = OpenAIEmbeddings()
@@ -140,3 +143,4 @@ if __name__ == "__main__":
 
     # Save DB locally
     vector_store.persist()
+
